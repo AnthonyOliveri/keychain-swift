@@ -86,6 +86,20 @@ class KeychainSwiftTests: XCTestCase {
     XCTAssert(obj.getBool("some bool key") == nil)
   }
 
+  // MARK: - Get all
+  // -----------------------
+
+  func testGetAll_returnEmptyWhenValuesNotSet() {
+    XCTAssert(obj.getAll().isEmpty)
+  }
+
+  // MARK: - Get all keys
+  // -----------------------
+
+  func testGetAllKeys_returnEmptyWhenValuesNotSet() {
+    XCTAssert(obj.getAllKeys().isEmpty)
+  }
+
   // MARK: - Delete
   // -----------------------
 

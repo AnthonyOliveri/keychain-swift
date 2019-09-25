@@ -215,6 +215,76 @@ open class KeychainSwift {
   }
 
   /**
+  
+  Retrieves all key/value pairs stored in the keychain.
+
+  - returns: An array of all key/value pairs from the keychain
+  
+  */
+  open func getAll() -> [String: Any] {
+    // The lock prevents the code to be run simlultaneously
+    // from multiple threads which may result in crashing
+    lock.lock()
+    defer { lock.unlock() }
+    
+    var query: [String: Any] = [
+      KeychainSwiftConstants.klass           : kSecClassGenericPassword,
+      KeychainSwiftConstants.returnReference : true,
+      KeychainSwiftConstants.matchLimit      : kSecMatchLimitAll
+    ]
+
+    #if os(iOS) || os(watchOS) || os(tvOS)
+    query[KeychainSwiftConstants.returnData] = true
+    #endif
+
+    query = addAccessGroupWhenPresent(query)
+    query = addSynchronizableIfRequired(query, addingItems: false)
+    lastQueryParameters = query
+    
+    var result: AnyObject?
+
+    lastResultCode = withUnsafeMutablePointer(to: &result) {
+      SecItemCopyMatching(query as CFDictionary, UnsafeMutablePointer($0))
+    }
+
+    var values: [String: Any] = [:]
+    if lastResultCode == noErr {
+      guard let array = result as? [[String: Any]] else {
+        return [:]
+      }
+
+      // Try to convert the value to String or Bool
+      // If that fails, fall back to Data
+      for item in array {
+        if let key = item[KeychainSwiftConstants.attrAccount] as? String,
+          let value = item[KeychainSwiftConstants.valueData] as? Data {
+
+          if let firstBit = value.first, value.count == 1 {
+            values[key] = firstBit == 1
+          } else if let stringValue = String(data: value, encoding: .utf8) {
+              values[key] = stringValue
+          } else {
+            values[key] = value
+          }
+        }
+      }
+    }
+
+    return values
+  }
+
+  /**
+  
+  Retrieves all keys stored in the keychain.
+
+  - returns: An array of all keys stored in the keychain
+  
+  */
+  open func getAllKeys() -> [String] {
+    return Array(getAll().keys)
+  }
+
+  /**
 
   Deletes the single keychain item specified by the key.
   
